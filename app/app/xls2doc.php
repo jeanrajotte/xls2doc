@@ -38,7 +38,12 @@ class Xls2Doc {
     $res = [];
     $objPHPExcel = PHPExcel_IOFactory::load($fname);
     // scan col A to find "A".
-    for($row=1; $row<500; $row++) {
+    $blanks = 20;
+    $i = 0;
+    for($row=1; $row<5000; $row++) {
+      if (++$i > $blanks) {
+        break;
+      }
       $cellValue = $objPHPExcel->getActiveSheet()->getCell('A'.$row)
         ->getValue();
       if (strtoupper($cellValue)=='A') {
@@ -48,6 +53,7 @@ class Xls2Doc {
           ->getValue();
         if ($k_val) {
           $res[$k_val] = $v_val;
+          $i = 0;
         }
       }
     }
