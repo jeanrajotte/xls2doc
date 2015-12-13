@@ -140,12 +140,23 @@ echo <<<EOT
     .form-group {
       bottom-margin: 12px;
     }
+    h1 {
+      position: relative;
+    }
+    #btn-refresh {
+      position: absolute;
+      bottom: -8px;
+      right: 0px;
+    }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <h1>$title <a id="btn-refresh" href="" class="btn btn-primary pull-right">Refresh</a></h1>
+<div class="container col-xs-12 col-sm-10 col-md-8 col-lg-6">
+  <h1>
+  $title
+  <a id="btn-refresh" href="" class="btn btn-primary pull-right">Refresh</a>
+  </h1>
 
   <form action="" method="post" id="qa-form-new" >
     <input type="hidden" name="qa-new-qa" value="1" />
@@ -159,7 +170,7 @@ echo <<<EOT
           <span id="err-new-name" class="err">*</span>&nbsp;
           <input  type="textbox" id="qa-name" name="qa-name" value="" />
         </label>
-        <button class="btn btn-primary pull-right{$new_enabled}" id="btn-qa-name">Create new questionaire</button>
+        <button class="btn btn-primary pull-right{$new_enabled}" id="btn-qa-name">Add to Inbox</button>
         <div class="col-xs-12">
           $log_new
         </div>
