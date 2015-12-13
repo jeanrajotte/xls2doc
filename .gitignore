@@ -1,0 +1,10 @@
+PhpOffice
+
+app/docs/*
+!app/docs/templates
+
+server/*
+!server/WT-NMP
+
+server/WT-NMP/*
+!server/WT-NMP/conf
