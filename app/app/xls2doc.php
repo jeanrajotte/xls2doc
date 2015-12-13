@@ -21,6 +21,13 @@ class Xls2Doc {
       $templateProcessor->setValue($key, htmlspecialchars($value));
     }
     $save_as = $out_dir.$x[0].'.'.basename($template_doc);
+    if (is_file($save_as)) {
+      $dt = (new DateTime('now', new DateTimeZone('america/toronto')))->format('Ymd_His');
+      $ext = pathinfo($save_as, PATHINFO_EXTENSION);
+      $bu_fname = $save_as.".$dt.$ext";
+      // die("$dt  $save_as  $bu_fname");
+      rename($save_as, $bu_fname);
+    }
     $templateProcessor->saveAs($save_as);
 
     return $save_as;

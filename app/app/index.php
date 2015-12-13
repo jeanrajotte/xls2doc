@@ -13,9 +13,11 @@ spl_autoload_register(function($class) {
 
 // filter ms backup file ~*
 function good_glob($mask) {
-  return array_filter( glob($mask), function($fname) {
+  $res = array_filter( glob($mask), function($fname) {
     return strpos( basename($fname), '~') === false;
   });
+  natcasesort($res);
+  return $res;
 }
 
 function alert($type, $msg) {
@@ -23,20 +25,14 @@ function alert($type, $msg) {
 }
 
 $conf = require('conf.php');
-$log = [];
 
 // print_r($_POST);
 // die();
 
-///////// gather templates
-
 $template_dir = $conf->doc_root.'templates/';
 
-$templates_xls = good_glob($template_dir.'*.xls*');
-$templates_doc = good_glob($template_dir.'*.doc*');
-
 ///////// process request
-
+$log_new = [];
 if (isset($_POST['qa-new-qa'])) {
   $template_fname = $_POST['qa-new-template'];
   $fname = $conf->doc_root.'in/'
@@ -46,15 +42,16 @@ if (isset($_POST['qa-new-qa'])) {
   $template_xls = $template_dir.$template_fname;
 
   if (file_exists($fname)) {
-    $log[] = alert('danger', "$fname exists already!");
+    $log_new[] = alert('danger', "$fname already exists!");
   } elseif (!copy($template_xls, $fname)) {
-    $log[] = alert('danger', "$fname creation from $template_xls failed.");
+    $log_new[] = alert('danger', "$fname creation from $template_xls failed.");
   } else {
-    $log[] = alert('success', "$fname created from $template_xls.");
+    $log_new[] = alert('success', "$fname created from $template_xls.");
   }
 
 }
 
+$log_process = [];
 if (isset($_POST['qa-process'])) {
   $template_doc = $template_dir.$_POST['qa-process-template'];
   $inbox = glob( $conf->doc_root.'in/*.xls*');
@@ -68,9 +65,9 @@ if (isset($_POST['qa-process'])) {
         $conf->doc_root.'out/')
     ) {
       // rename($fname, $conf->doc_root.'done/'.basename($fname));
-      $log[] = alert('success', "$out_fname created from $template_doc.");
+      $log_process[] = alert('success', "$out_fname created from $template_doc.");
     } else {
-      $log[] = alert('danger', $xls2doc->lastError());
+      $log_process[] = alert('danger', $xls2doc->lastError());
     }
 
   }
@@ -80,39 +77,40 @@ if (isset($_POST['qa-process'])) {
 
 ////////// gather file lists
 
+$templates_xls = good_glob($template_dir.'*.xls*');
+$templates_doc = good_glob($template_dir.'*.doc*');
 $inbox_dir = good_glob( $conf->doc_root.'in/*.xls*');
 $out_dir = good_glob( $conf->doc_root.'out/*.doc*');
 
-// echo $conf->doc_root;
-// print_r($current_dir);
-// die();
-
-// $inbox_files = implode('<br>', array_map('basename', $inbox_dir));
 $out_files = implode('<br>', array_map('basename', $out_dir));
 
+$new_enabled = empty($templates_xls)
+  ? ' disabled'
+  : '';
 $process_enabled = empty($templates_doc) || empty($inbox_dir)
   ? ' disabled'
   : '';
 
-$title = 'XLS to DOC convertor';
+$title = 'XLS to DOC Convertor';
 
-$log = implode('', $log);
+$log_new = implode('', $log_new);
+$log_process = implode('', $log_process);
 
-$inbox_checkboxes = '<div>'
+$inbox_checkboxes = '<div class="form-group">'
   .implode('', array_map(function($fname) {
     return '<label><input type="checkbox" name="qa-inbox-fnames[]" value="'
       .basename($fname).'" /> '.basename($fname).'</label><br/>';
   }, $inbox_dir))
   .'</div>';
 
-$xls_radios = '<div class="radio-group">'
+$xls_radios = '<div class="form-group">'
   .implode('', array_map(function($fname) {
     return '<label><input type="radio" name="qa-new-template" value="'
       .basename($fname).'" /> '.basename($fname).'</label><br/>';
   }, $templates_xls))
   .'</div>';
 
-$doc_radios = '<div class="radio-group">'
+$doc_radios = '<div class="form-group">'
   .implode('', array_map(function($fname) {
     return '<label><input type="radio" name="qa-process-template" value="'
       .basename($fname).'" /> '.basename($fname).'</label><br/>';
@@ -139,38 +137,31 @@ echo <<<EOT
       display: none;
       vertical-align: middle;
     }
+    .form-group {
+      bottom-margin: 12px;
+    }
   </style>
 </head>
 <body>
 
 <div class="container">
-  <h1>$title</h1>
-
-  <a id="btn-refresh" href="" class="btn btn-primary pull-right">Refresh</a>
-
-
-  <div class="row">
-    <div class="col-xs-12">
-      $log
-    </div>
-  </div>
+  <h1>$title <a id="btn-refresh" href="" class="btn btn-primary pull-right">Refresh</a></h1>
 
   <form action="" method="post" id="qa-form-new" >
     <input type="hidden" name="qa-new-qa" value="1" />
 
-    <div class="row alert alert-warning" >
-      <div class="col-xs-6">
-        <h4>Q&A templates <span id="err-new-template" class="err">*</span></h4>
+    <div class="row bg-warning" >
+      <div class="col-xs-12">
+        <h3>Input templates <span id="err-new-template" class="err">*</span></h3>
         <span id="err-new-template" class="err">*</span>
         $xls_radios
-      </div>
-      <div class="col-xs-6">
-        <div class="pull-right">
-          <label>Questionaire name
-            <span id="err-new-name" class="err">*</span><br/>
-            <input  type="textbox" id="qa-name" name="qa-name" value="" />
-          </label><br/><br/>
-          <button class="btn btn-primary" id="btn-qa-name">Create new questionaire</button>
+        <label>Form name
+          <span id="err-new-name" class="err">*</span>&nbsp;
+          <input  type="textbox" id="qa-name" name="qa-name" value="" />
+        </label>
+        <button class="btn btn-primary pull-right{$new_enabled}" id="btn-qa-name">Create new questionaire</button>
+        <div class="col-xs-12">
+          $log_new
         </div>
       </div>
 
@@ -180,35 +171,33 @@ echo <<<EOT
 
   <form action="" method="post" id="qa-form-process">
 
-    <div class="row">
+    <div class="row bg-info">
       <div class="col-xs-12">
-        <div class="panel">
-          <h3>In <span id="err-inbox-fnames" class="err">*</span></h3>
-          $inbox_checkboxes
-        </div>
+        <h3>Inbox - For filling <span id="err-inbox-fnames" class="err">*</span></h3>
+        $inbox_checkboxes
       </div>
     </div>
 
-    <div class="row alert alert-warning">
-      <div class="col-xs-12">
+    <div class="row bg-warning">
+      <div class="col-xs-6">
         <input type="hidden" name="qa-process" value="1" />
-        <h4>Output templates <span id="err-process-template" class="err">*</span></h4>
+        <h3>Output templates <span id="err-process-template" class="err">*</span></h3>
         $doc_radios
       </div>
-      <p>
+      <div class="col-xs-6">
         <button id="btn-qa-process" class="btn btn-primary{$process_enabled} pull-right">Process Inbox</button>
-      </p>
+      </div>
+      <div class="col-xs-12">
+        $log_process
+      </div>
     </div>
 
   </form>
 
   <div class="row">
     <div class="col-xs-12">
-
-      <p>
-      </p>
       <div class="panel">
-        <h3>Output - Ready for review</h3>
+        <h3>Output - For review</h3>
         <div>
           $out_files
         </div>
@@ -221,12 +210,12 @@ echo <<<EOT
   $(document).ready( function() {
 
     $('#btn-qa-name').on('click', function() {
-      if (! $("#qa-name").val()) {
-        $('#err-new-name').show();
-        return false;
-      }
       if (! $('input:radio[name=qa-new-template]:checked').val()) {
         $('#err-new-template').show();
+        return false;
+      }
+      if (! $("#qa-name").val()) {
+        $('#err-new-name').show();
         return false;
       }
       $('#qa-form-new').submit();
